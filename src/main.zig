@@ -1,21 +1,19 @@
-const std = @import("std");
-const t = @import("types.zig");
+const board = @import("board.zig");
+const Sq = board.Sq;
+const movegen = @import("movegen.zig");
 
 pub fn main() void {
-    var bb = t.Bitboard.fromU64(0);
-    const sq = t.Square.a1;
-    std.debug.print("Is {} set? {}\n", .{ sq, bb.isSet(sq) });
-    std.debug.print("Least significant bit set: {?}\n", .{bb.getLsb()});
-    bb.set(sq);
-    std.debug.print("Is {} set? {}\n", .{ sq, bb.isSet(sq) });
-    std.debug.print("Least significant bit set: {?}\n", .{bb.getLsb()});
-    bb.clear(sq);
-    std.debug.print("Is {} set? {}\n", .{ sq, bb.isSet(sq) });
-    bb.set(sq);
-    std.debug.print("Is {} set? {}\n", .{ sq, bb.isSet(sq) });
-    std.debug.print("Least significant bit set: {?}\n", .{bb.popLsb()});
-    std.debug.print("Is {} set? {}\n", .{ sq, bb.isSet(sq) });
-    bb.set(sq);
-    bb.set(.h8);
-    bb.print();
+    init();
+    var occ: u64 = 0;
+    board.set(&occ, @intFromEnum(Sq.e4));
+    board.set(&occ, @intFromEnum(Sq.g7));
+    board.set(&occ, @intFromEnum(Sq.b6));
+    board.set(&occ, @intFromEnum(Sq.d3));
+    board.print(occ);
+    const attacks = movegen.getQueenAttacks(@intFromEnum(Sq.d4), occ);
+    board.print(attacks);
+}
+
+fn init() void {
+    movegen.initSliderAttackTables();
 }
