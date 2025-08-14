@@ -296,3 +296,79 @@ pub fn getBishopAttacks(sq: u8, occ: u64) u64 {
 pub fn getQueenAttacks(sq: u8, occ: u64) u64 {
     return getRookAttacks(sq, occ) | getBishopAttacks(sq, occ);
 }
+
+const Move = struct {
+    data: u32,
+
+    const source_sq_mask = 0x3F; // Bits 0-5
+    const target_sq_mask = 0xFC0; // Bits 6-11
+    const moved_piece_mask = 0xF000; // Bits 12-15
+    const promoted_piece_mask = 0xF0000; // Bits 16-19
+    const capture_flag = 1 << 20;
+    const double_push_flag = 1 << 21;
+    const en_passant_flag = 1 << 22;
+    const castling_flag = 1 << 23;
+
+    const target_sq_shift = 6;
+    const moved_piece_shift = 12;
+    const promoted_piece_shift = 16;
+
+    fn encode(source_sq: u8, target_sq: u8, moved_piece: u8, promoted_piece: u8, is_capture: bool, is_double_push: bool, is_en_passant: bool, is_castling: bool) Move {
+        var data: u32 = 0;
+        data |= @as(u32, source_sq) & source_sq_mask;
+        data |= (@as(u32, target_sq) << target_sq_shift) & target_sq_mask;
+        data |= (@as(u32, moved_piece) << moved_piece_shift) & moved_piece_mask;
+        data |= (@as(u32, promoted_piece) << promoted_piece_shift) & promoted_piece_mask;
+        if (is_capture) data |= capture_flag;
+        if (is_double_push) data |= double_push_flag;
+        if (is_en_passant) data |= en_passant_flag;
+        if (is_castling) data |= castling_flag;
+        return .{ .data = data };
+    }
+
+    fn sourceSq(self: Move) u8 {
+        return @truncate(self.data & source_sq_mask);
+    }
+
+    fn targetSq(self: Move) u8 {
+        return @truncate((self.data & target_sq_mask) >> target_sq_shift);
+    }
+
+    fn movedPiece(self: Move) u8 {
+        return @truncate((self.data & moved_piece_mask) >> moved_piece_shift);
+    }
+
+    fn promotedPiece(self: Move) u8 {
+        return @truncate((self.data & promoted_piece_mask) >> promoted_piece_shift);
+    }
+
+    fn isCapture(self: Move) bool {
+        return (self.data & capture_flag) != 0;
+    }
+
+    fn isDoublePush(self: Move) bool {
+        return (self.data & double_push_flag) != 0;
+    }
+
+    fn isEnPassant(self: Move) bool {
+        return (self.data & en_passant_flag) != 0;
+    }
+
+    fn isCastling(self: Move) bool {
+        return (self.data & castling_flag) != 0;
+    }
+};
+
+const MoveFilter = enum { all, just_captures };
+
+const MoveList = struct {
+    moves: [max_moves]Move,
+    count: u8 = 0,
+
+    const max_moves = 256;
+
+    fn add(self: *MoveList, mv: Move) void {
+        self.moves[self.count] = mv;
+        self.count += 1;
+    }
+};
