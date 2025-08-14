@@ -1,19 +1,14 @@
 const board = @import("board.zig");
 const Sq = board.Sq;
 const movegen = @import("movegen.zig");
+const position = @import("position.zig");
 
-pub fn main() void {
-    init();
-    var occ: u64 = 0;
-    board.set(&occ, @intFromEnum(Sq.e4));
-    board.set(&occ, @intFromEnum(Sq.g7));
-    board.set(&occ, @intFromEnum(Sq.b6));
-    board.set(&occ, @intFromEnum(Sq.d3));
-    board.print(occ);
-    const attacks = movegen.getQueenAttacks(@intFromEnum(Sq.d4), occ);
-    board.print(attacks);
+pub fn main() !void {
+    initEngine();
+    const pos = try position.fromFen("rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQq e6 0 1");
+    pos.print();
 }
 
-fn init() void {
+fn initEngine() void {
     movegen.initSliderAttackTables();
 }

@@ -182,7 +182,7 @@ fn genRookAttacks(signed_sq: i8, occ: u64) u64 {
     var attacks: u64 = 0;
 
     var sq = signed_sq + 8;
-    while (sq < board.num_squares) : (sq += 8) {
+    while (sq < Sq.count) : (sq += 8) {
         board.set(&attacks, @intCast(sq));
         if (board.isSet(occ, @intCast(sq))) break;
     }
@@ -194,7 +194,7 @@ fn genRookAttacks(signed_sq: i8, occ: u64) u64 {
     }
 
     sq = signed_sq + 1;
-    while ((sq < board.num_squares) and (sq & (board.num_files - 1) != 0)) : (sq += 1) {
+    while ((sq < Sq.count) and (sq & (board.num_files - 1) != 0)) : (sq += 1) {
         board.set(&attacks, @intCast(sq));
         if (board.isSet(occ, @intCast(sq))) break;
     }
@@ -212,7 +212,7 @@ fn genBishopAttacks(signed_sq: i8, occ: u64) u64 {
     var attacks: u64 = 0;
 
     var sq = signed_sq + 9;
-    while ((sq < board.num_squares) and (sq & (board.num_files - 1) != 0)) : (sq += 9) {
+    while ((sq < Sq.count) and (sq & (board.num_files - 1) != 0)) : (sq += 9) {
         board.set(&attacks, @intCast(sq));
         if (board.isSet(occ, @intCast(sq))) break;
     }
@@ -224,7 +224,7 @@ fn genBishopAttacks(signed_sq: i8, occ: u64) u64 {
     }
 
     sq = signed_sq + 7;
-    while ((sq < board.num_squares) and (sq & (board.num_files - 1) != 7)) : (sq += 7) {
+    while ((sq < Sq.count) and (sq & (board.num_files - 1) != 7)) : (sq += 7) {
         board.set(&attacks, @intCast(sq));
         if (board.isSet(occ, @intCast(sq))) break;
     }
@@ -252,9 +252,9 @@ fn idxToOcc(idx: u16, num_bits: u8, mask: u64) u64 {
 }
 
 fn initSliderAttackTable(attacks_table: anytype, masks: [64]u64, magics: [64]u64, shifts: [64]u8, genAttacksFn: fn (i8, u64) u64) void {
-    for (0..board.num_squares) |sq| {
+    for (0..Sq.count) |sq| {
         const shift = shifts[sq];
-        const num_bits = board.num_squares - shift;
+        const num_bits = Sq.count - shift;
         const max_idx = @as(u16, 1) << @intCast(num_bits);
 
         var idx: u16 = 0;
