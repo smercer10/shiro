@@ -1,10 +1,9 @@
 const std = @import("std");
-const board = @import("board.zig");
-const Sq = board.Sq;
-const Piece = @import("position.zig").Piece;
+const b = @import("bitboard.zig");
+const c = @import("common.zig");
 
 // zig fmt: off
-const pawn_attacks = [2][64]u64{
+const pawn_attacks = [c.num_sides][c.num_squares]u64{
     .{
         0x0000000000000200, 0x0000000000000500, 0x0000000000000a00, 0x0000000000001400,
         0x0000000000002800, 0x0000000000005000, 0x000000000000a000, 0x0000000000004000,
@@ -43,7 +42,7 @@ const pawn_attacks = [2][64]u64{
     }
 };
 
-const knight_attacks = [64]u64{
+const knight_attacks = [c.num_squares]u64{
     0x0000000000020400, 0x0000000000050800, 0x00000000000a1100, 0x0000000000142200,
     0x0000000000284400, 0x0000000000508800, 0x0000000000a01000, 0x0000000000402000,
     0x0000000002040004, 0x0000000005080008, 0x000000000a110011, 0x0000000014220022,
@@ -62,7 +61,7 @@ const knight_attacks = [64]u64{
     0x0044280000000000, 0x0088500000000000, 0x0010a00000000000, 0x0020400000000000
 };
 
-const king_attacks = [64]u64{
+const king_attacks = [c.num_squares]u64{
     0x0000000000000302, 0x0000000000000705, 0x0000000000000e0a, 0x0000000000001c14,
     0x0000000000003828, 0x0000000000007050, 0x000000000000e0a0, 0x000000000000c040,
     0x0000000000030203, 0x0000000000070507, 0x00000000000e0a0e, 0x00000000001c141c,
@@ -81,7 +80,7 @@ const king_attacks = [64]u64{
     0x2838000000000000, 0x5070000000000000, 0xa0e0000000000000, 0x40c0000000000000
 };
 
-const rook_masks = [64]u64{
+const rook_masks = [c.num_squares]u64{
     0x000101010101017e, 0x000202020202027c, 0x000404040404047a, 0x0008080808080876,
     0x001010101010106e, 0x002020202020205e, 0x004040404040403e, 0x008080808080807e,
     0x0001010101017e00, 0x0002020202027c00, 0x0004040404047a00, 0x0008080808087600,
@@ -100,7 +99,7 @@ const rook_masks = [64]u64{
     0x6e10101010101000, 0x5e20202020202000, 0x3e40404040404000, 0x7e80808080808000
 };
 
-const bishop_masks = [64]u64{
+const bishop_masks = [c.num_squares]u64{
     0x0040201008040200, 0x0000402010080400, 0x0000004020100a00, 0x0000000040221400,
     0x0000000002442800, 0x0000000204085000, 0x0000020408102000, 0x0002040810204000,
     0x0020100804020000, 0x0040201008040000, 0x00004020100a0000, 0x0000004022140000,
@@ -119,7 +118,7 @@ const bishop_masks = [64]u64{
     0x0028440200000000, 0x0050080402000000, 0x0020100804020000, 0x0040201008040200
 };
 
-const rook_magics = [64]u64{
+const rook_magics = [c.num_squares]u64{
     0x0080001020400080, 0x0040001000200040, 0x0080081000200080, 0x0080040800100080,
     0x0080020400080080, 0x0080010200040080, 0x0080008001000200, 0x0080002040800100,
     0x0000800020400080, 0x0000400020005000, 0x0000801000200080, 0x0000800800100080,
@@ -138,7 +137,7 @@ const rook_magics = [64]u64{
     0x0001000204080011, 0x0001000204000801, 0x0001000082000401, 0x0001FFFAABFAD1A2
 };
 
-const bishop_magics = [64]u64{
+const bishop_magics = [c.num_squares]u64{
     0x0002020202020200, 0x0002020202020000, 0x0004010202000000, 0x0004040080000000,
     0x0001104000000000, 0x0000821040000000, 0x0000410410400000, 0x0000104104104000,
     0x0000040404040400, 0x0000020202020200, 0x0000040102020000, 0x0000040400800000,
@@ -157,7 +156,7 @@ const bishop_magics = [64]u64{
     0x0000000010020200, 0x0000000404080200, 0x0000040404040400, 0x0002020202020200
 };
 
-const rook_shifts = [64]u8{
+const rook_shifts = [c.num_squares]u8{
     52, 53, 53, 53, 53, 53, 53, 52,
     53, 54, 54, 54, 54, 54, 54, 53,
     53, 54, 54, 54, 54, 54, 54, 53,
@@ -168,7 +167,7 @@ const rook_shifts = [64]u8{
     52, 53, 53, 53, 53, 53, 53, 52
 };
 
-const bishop_shifts = [64]u8{
+const bishop_shifts = [c.num_squares]u8{
     58, 59, 59, 59, 59, 59, 59, 58,
     59, 59, 59, 59, 59, 59, 59, 59,
     59, 59, 57, 57, 57, 57, 59, 59,
@@ -180,31 +179,50 @@ const bishop_shifts = [64]u8{
 };
 // zig fmt: on
 
+const Dir = struct {
+    const n = 8;
+    const s = -8;
+    const e = 1;
+    const w = -1;
+    const ne = 9;
+    const nw = 7;
+    const se = -7;
+    const sw = -9;
+};
+
+fn wrappedToAFile(sq: i8) bool {
+    return (sq & (c.num_files - 1)) != 0;
+}
+
+fn wrappedToHFile(sq: i8) bool {
+    return (sq & (c.num_files - 1)) != 7;
+}
+
 fn genRookAttacks(signed_sq: i8, occ: u64) u64 {
     var attacks: u64 = 0;
 
-    var sq = signed_sq + 8;
-    while (sq < Sq.count) : (sq += 8) {
-        board.set(&attacks, @intCast(sq));
-        if (board.isSet(occ, @intCast(sq))) break;
+    var sq = signed_sq + Dir.n;
+    while (sq < c.num_squares) : (sq += Dir.n) {
+        b.set(&attacks, @intCast(sq));
+        if (b.isSet(occ, @intCast(sq))) break;
     }
 
-    sq = signed_sq - 8;
-    while (sq >= 0) : (sq -= 8) {
-        board.set(&attacks, @intCast(sq));
-        if (board.isSet(occ, @intCast(sq))) break;
+    sq = signed_sq + Dir.s;
+    while (sq >= 0) : (sq += Dir.s) {
+        b.set(&attacks, @intCast(sq));
+        if (b.isSet(occ, @intCast(sq))) break;
     }
 
-    sq = signed_sq + 1;
-    while ((sq < Sq.count) and (sq & (board.num_files - 1) != 0)) : (sq += 1) {
-        board.set(&attacks, @intCast(sq));
-        if (board.isSet(occ, @intCast(sq))) break;
+    sq = signed_sq + Dir.e;
+    while ((sq < c.num_squares) and wrappedToAFile(sq)) : (sq += Dir.e) {
+        b.set(&attacks, @intCast(sq));
+        if (b.isSet(occ, @intCast(sq))) break;
     }
 
-    sq = signed_sq - 1;
-    while ((sq >= 0) and (sq & (board.num_files - 1) != 7)) : (sq -= 1) {
-        board.set(&attacks, @intCast(sq));
-        if (board.isSet(occ, @intCast(sq))) break;
+    sq = signed_sq + Dir.w;
+    while ((sq >= 0) and wrappedToHFile(sq)) : (sq += Dir.w) {
+        b.set(&attacks, @intCast(sq));
+        if (b.isSet(occ, @intCast(sq))) break;
     }
 
     return attacks;
@@ -213,28 +231,28 @@ fn genRookAttacks(signed_sq: i8, occ: u64) u64 {
 fn genBishopAttacks(signed_sq: i8, occ: u64) u64 {
     var attacks: u64 = 0;
 
-    var sq = signed_sq + 9;
-    while ((sq < Sq.count) and (sq & (board.num_files - 1) != 0)) : (sq += 9) {
-        board.set(&attacks, @intCast(sq));
-        if (board.isSet(occ, @intCast(sq))) break;
+    var sq = signed_sq + Dir.ne;
+    while ((sq < c.num_squares) and wrappedToAFile(sq)) : (sq += Dir.ne) {
+        b.set(&attacks, @intCast(sq));
+        if (b.isSet(occ, @intCast(sq))) break;
     }
 
-    sq = signed_sq - 9;
-    while ((sq >= 0) and (sq & (board.num_files - 1) != 7)) : (sq -= 9) {
-        board.set(&attacks, @intCast(sq));
-        if (board.isSet(occ, @intCast(sq))) break;
+    sq = signed_sq + Dir.nw;
+    while ((sq < c.num_squares) and wrappedToHFile(sq)) : (sq += Dir.nw) {
+        b.set(&attacks, @intCast(sq));
+        if (b.isSet(occ, @intCast(sq))) break;
     }
 
-    sq = signed_sq + 7;
-    while ((sq < Sq.count) and (sq & (board.num_files - 1) != 7)) : (sq += 7) {
-        board.set(&attacks, @intCast(sq));
-        if (board.isSet(occ, @intCast(sq))) break;
+    sq = signed_sq + Dir.se;
+    while ((sq >= 0) and wrappedToAFile(sq)) : (sq += Dir.se) {
+        b.set(&attacks, @intCast(sq));
+        if (b.isSet(occ, @intCast(sq))) break;
     }
 
-    sq = signed_sq - 7;
-    while ((sq >= 0) and (sq & (board.num_files - 1) != 0)) : (sq -= 7) {
-        board.set(&attacks, @intCast(sq));
-        if (board.isSet(occ, @intCast(sq))) break;
+    sq = signed_sq + Dir.sw;
+    while ((sq >= 0) and wrappedToHFile(sq)) : (sq += Dir.sw) {
+        b.set(&attacks, @intCast(sq));
+        if (b.isSet(occ, @intCast(sq))) break;
     }
 
     return attacks;
@@ -243,34 +261,32 @@ fn genBishopAttacks(signed_sq: i8, occ: u64) u64 {
 fn idxToOcc(idx: u16, num_bits: u8, mask: u64) u64 {
     var mut_mask = mask;
     var occ: u64 = 0;
-
     var bit: u8 = 0;
     while (bit < num_bits) : (bit += 1) {
-        const sq = board.popLsb(&mut_mask);
-        if ((idx >> @intCast(bit)) & 1 != 0) board.set(&occ, sq);
+        const sq = b.popLsb(&mut_mask) orelse unreachable;
+        if ((idx >> @intCast(bit)) & 1 != 0) b.set(&occ, sq);
     }
-
     return occ;
 }
 
-fn initSliderAttackTable(attacks_table: anytype, masks: [64]u64, magics: [64]u64, shifts: [64]u8, genAttacksFn: fn (i8, u64) u64) void {
-    for (0..Sq.count) |sq| {
+fn initSliderAttackTable(attacks_table: anytype, masks: [c.num_squares]u64, magics: [c.num_squares]u64, shifts: [c.num_squares]u8, genAttacksFn: fn (i8, u64) u64) void {
+    for (0..c.num_squares) |sq| {
         const shift = shifts[sq];
-        const num_bits = Sq.count - shift;
+        const num_bits = c.num_squares - shift;
         const max_idx = @as(u16, 1) << @intCast(num_bits);
-
         var idx: u16 = 0;
         while (idx < max_idx) : (idx += 1) {
             const occ = idxToOcc(idx, num_bits, masks[sq]);
-            const attacks = genAttacksFn(@intCast(sq), occ);
-            const magic_idx = (occ *% magics[sq]) >> @intCast(shift);
-            attacks_table[sq][magic_idx] = attacks;
+            attacks_table[sq][(occ *% magics[sq]) >> @intCast(shift)] = genAttacksFn(@intCast(sq), occ);
         }
     }
 }
 
-var rook_attacks: [64][4096]u64 = undefined;
-var bishop_attacks: [64][512]u64 = undefined;
+const max_rook_occs = 4096;
+var rook_attacks: [c.num_squares][max_rook_occs]u64 = undefined;
+
+const max_bishop_occs = 512;
+var bishop_attacks: [c.num_squares][max_bishop_occs]u64 = undefined;
 
 pub fn initSliderAttackTables() void {
     initSliderAttackTable(&rook_attacks, rook_masks, rook_magics, rook_shifts, genRookAttacks);
@@ -360,18 +376,18 @@ pub const Move = struct {
         return (self.data & castling_flag) != 0;
     }
 
-    const promo_pieces = [Piece.count]u8{
+    const promo_pieces = [c.num_pieces]u8{
         0, 'n', 'b', 'r', 'q', 0,
         0, 'n', 'b', 'r', 'q', 0,
     };
 
     // For stdout/UCI
     pub fn toString(self: Move, buf: []u8) []u8 {
-        const source_sq = board.squares[self.sourceSq()];
-        const target_sq = board.squares[self.targetSq()];
-        const promo_pc = self.promotedPiece();
-        if (promo_pc < promo_pieces.len and promo_pieces[promo_pc] != 0) {
-            return std.fmt.bufPrint(buf, "{s}{s}{c}", .{ source_sq, target_sq, promo_pieces[promo_pc] }) catch buf[0..0];
+        const source_sq = b.squares[self.sourceSq()];
+        const target_sq = b.squares[self.targetSq()];
+        const promo_piece = self.promotedPiece();
+        if (promo_piece < promo_pieces.len and promo_pieces[promo_piece] != 0) {
+            return std.fmt.bufPrint(buf, "{s}{s}{c}", .{ source_sq, target_sq, promo_pieces[promo_piece] }) catch buf[0..0];
         } else {
             return std.fmt.bufPrint(buf, "{s}{s}", .{ source_sq, target_sq }) catch buf[0..0];
         }
@@ -379,24 +395,20 @@ pub const Move = struct {
 
     // For stderr/debugging
     pub fn format(self: Move, writer: anytype) !void {
-        try writer.writeAll(board.squares[self.sourceSq()]);
-        try writer.writeAll(board.squares[self.targetSq()]);
-        const promo_pc = self.promotedPiece();
-        if (promo_pc < promo_pieces.len and promo_pieces[promo_pc] != 0) try writer.writeByte(promo_pieces[promo_pc]);
+        try writer.writeAll(c.squares[self.sourceSq()]);
+        try writer.writeAll(c.squares[self.targetSq()]);
+        const promo_piece = self.promotedPiece();
+        if (promo_piece < promo_pieces.len and promo_pieces[promo_piece] != 0) try writer.writeByte(promo_pieces[promo_piece]);
     }
 };
 
 const MoveFilter = enum { all, just_captures };
 
 pub const MoveList = struct {
-    moves: [max_moves]Move,
-    count: u8,
+    moves: [max_moves]Move = undefined,
+    count: u8 = 0,
 
     const max_moves = 256;
-
-    pub fn init() MoveList {
-        return .{ .moves = undefined, .count = 0 };
-    }
 
     pub fn add(self: *MoveList, mv: Move) void {
         self.moves[self.count] = mv;
@@ -412,7 +424,7 @@ pub const MoveList = struct {
                 if (mv.isCastling()) 'c' else '-',
             };
 
-            std.debug.print("{}: {f} {c} {s}\n", .{ i, mv, Piece.ascii_chars[mv.movedPiece()], &flags });
+            std.debug.print("{}: {f} {c} {s}\n", .{ i, mv, c.Piece.ascii_chars[mv.movedPiece()], &flags });
         }
         std.debug.print("\nTotal moves: {}\n", .{self.count});
     }
