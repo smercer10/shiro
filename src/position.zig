@@ -19,7 +19,7 @@ const Side = enum(u8) {
     const count = 3;
 };
 
-const Piece = enum(u8) {
+pub const Piece = enum(u8) {
     // zig fmt: off
     wp, wn, wb, wr, wq, wk, 
     bp, bn, bb, br, bq, bk,
@@ -33,7 +33,7 @@ const Piece = enum(u8) {
     }
     // zig fmt: on
 
-    const ascii_chars = "PNBRQKpnbrqk";
+    pub const ascii_chars = "PNBRQKpnbrqk";
 
     fn toChar(self: Piece) u8 {
         return ascii_chars[@intFromEnum(self)];
@@ -46,7 +46,7 @@ const Piece = enum(u8) {
         };
     }
 
-    const count = 12;
+    pub const count = 12;
 };
 
 const CastlingRight = enum(u8) { wks = 0b0001, wqs = 0b0010, bks = 0b0100, bqs = 0b1000 };

@@ -1,12 +1,15 @@
-const board = @import("board.zig");
-const Sq = board.Sq;
+const std = @import("std");
+
+const Sq = @import("board.zig").Sq;
 const movegen = @import("movegen.zig");
-const position = @import("position.zig");
+const Piece = @import("position.zig").Piece;
 
 pub fn main() !void {
     initEngine();
-    const pos = try position.fromFen("rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQq e6 0 1");
-    pos.print();
+    var move_list = movegen.MoveList.init();
+    const mv = movegen.Move.encode(@intFromEnum(Sq.a1), @intFromEnum(Sq.a2), @intFromEnum(Piece.wp), @intFromEnum(Piece.wq), true, true, false, true);
+    move_list.add(mv);
+    move_list.print();
 }
 
 fn initEngine() void {

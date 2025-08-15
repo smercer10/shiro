@@ -1,5 +1,7 @@
+const std = @import("std");
 const board = @import("board.zig");
 const Sq = board.Sq;
+const Piece = @import("position.zig").Piece;
 
 // zig fmt: off
 const pawn_attacks = [2][64]u64{
@@ -297,7 +299,7 @@ pub fn getQueenAttacks(sq: u8, occ: u64) u64 {
     return getRookAttacks(sq, occ) | getBishopAttacks(sq, occ);
 }
 
-const Move = struct {
+pub const Move = struct {
     data: u32,
 
     const source_sq_mask = 0x3F; // Bits 0-5
@@ -313,7 +315,7 @@ const Move = struct {
     const moved_piece_shift = 12;
     const promoted_piece_shift = 16;
 
-    fn encode(source_sq: u8, target_sq: u8, moved_piece: u8, promoted_piece: u8, is_capture: bool, is_double_push: bool, is_en_passant: bool, is_castling: bool) Move {
+    pub fn encode(source_sq: u8, target_sq: u8, moved_piece: u8, promoted_piece: u8, is_capture: bool, is_double_push: bool, is_en_passant: bool, is_castling: bool) Move {
         var data: u32 = 0;
         data |= @as(u32, source_sq) & source_sq_mask;
         data |= (@as(u32, target_sq) << target_sq_shift) & target_sq_mask;
@@ -357,18 +359,61 @@ const Move = struct {
     fn isCastling(self: Move) bool {
         return (self.data & castling_flag) != 0;
     }
+
+    const promo_pieces = [Piece.count]u8{
+        0, 'n', 'b', 'r', 'q', 0,
+        0, 'n', 'b', 'r', 'q', 0,
+    };
+
+    // For stdout/UCI
+    pub fn toString(self: Move, buf: []u8) []u8 {
+        const source_sq = board.squares[self.sourceSq()];
+        const target_sq = board.squares[self.targetSq()];
+        const promo_pc = self.promotedPiece();
+        if (promo_pc < promo_pieces.len and promo_pieces[promo_pc] != 0) {
+            return std.fmt.bufPrint(buf, "{s}{s}{c}", .{ source_sq, target_sq, promo_pieces[promo_pc] }) catch buf[0..0];
+        } else {
+            return std.fmt.bufPrint(buf, "{s}{s}", .{ source_sq, target_sq }) catch buf[0..0];
+        }
+    }
+
+    // For stderr/debugging
+    pub fn format(self: Move, writer: anytype) !void {
+        try writer.writeAll(board.squares[self.sourceSq()]);
+        try writer.writeAll(board.squares[self.targetSq()]);
+        const promo_pc = self.promotedPiece();
+        if (promo_pc < promo_pieces.len and promo_pieces[promo_pc] != 0) try writer.writeByte(promo_pieces[promo_pc]);
+    }
 };
 
 const MoveFilter = enum { all, just_captures };
 
-const MoveList = struct {
+pub const MoveList = struct {
     moves: [max_moves]Move,
-    count: u8 = 0,
+    count: u8,
 
     const max_moves = 256;
 
-    fn add(self: *MoveList, mv: Move) void {
+    pub fn init() MoveList {
+        return .{ .moves = undefined, .count = 0 };
+    }
+
+    pub fn add(self: *MoveList, mv: Move) void {
         self.moves[self.count] = mv;
         self.count += 1;
+    }
+
+    pub fn print(self: MoveList) void {
+        for (self.moves[0..self.count], 1..) |mv, i| {
+            const flags = [4]u8{
+                if (mv.isCapture()) 'x' else '-',
+                if (mv.isDoublePush()) 'd' else '-',
+                if (mv.isEnPassant()) 'e' else '-',
+                if (mv.isCastling()) 'c' else '-',
+            };
+
+            std.debug.print("{}: {f} {c} {s}\n", .{ i, mv, Piece.ascii_chars[mv.movedPiece()], &flags });
+        }
+        std.debug.print("\nTotal moves: {}\n", .{self.count});
     }
 };
