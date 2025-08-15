@@ -2,15 +2,17 @@ const std = @import("std");
 const b = @import("bitboard.zig");
 const c = @import("common.zig");
 
-const Position = struct {
+pub const Position = struct {
     piece_bbs: [c.num_pieces]u64 = std.mem.zeroes([c.num_pieces]u64),
-    occ_bbs: [c.num_occ_bbs]u64 = std.mem.zeroes([c.num_occ_bbs]u64),
+    occ_bbs: [num_occ_bbs]u64 = std.mem.zeroes([num_occ_bbs]u64),
     zobrist_hash: u64 = 0,
     fullmove_num: u16 = 1,
     halfmove_clock: u8 = 0,
     active_side: c.Side = .white,
     ep_sq: ?u8 = null,
     castling_rights: u8 = 0,
+
+    const num_occ_bbs = 3;
 
     fn pieceAt(self: Position, sq: u8) ?c.Piece {
         for (self.piece_bbs, 0..) |bb, piece_idx| if (b.isSet(bb, sq)) return @enumFromInt(piece_idx);
@@ -55,7 +57,7 @@ const Position = struct {
 fn parseSquare(str: []const u8) ?u8 {
     if (str.len < 2) return null;
     if (str[0] < 'a' or str[0] > 'h' or str[1] < '1' or str[1] > '8') return null;
-    return ((str[1] - '1') * b.num_files) + (str[0] - 'a');
+    return ((str[1] - '1') * c.num_files) + (str[0] - 'a');
 }
 
 pub fn fromFen(fen: []const u8) !Position {
@@ -74,7 +76,7 @@ pub fn fromFen(fen: []const u8) !Position {
             '1'...'8' => file += ch - '0',
             else => {
                 const piece = c.Piece.fromChar(ch) orelse return error.InvalidFen;
-                pos.setPiece(piece, rank * b.num_files + file);
+                pos.setPiece(piece, rank * c.num_files + file);
                 file += 1;
             },
         }
