@@ -405,7 +405,7 @@ pub const Move = struct {
     }
 };
 
-const MoveFilter = enum { all, just_captures };
+pub const MoveFilter = enum { all, just_captures };
 
 pub const MoveList = struct {
     moves: [max_moves]Move = undefined,
@@ -449,10 +449,10 @@ fn isSquareAttacked(pos: p.Position, sq: u8, attacking_side: c.Side) bool {
     return false;
 }
 
-fn addPawnPromoMoves(move_list: *MoveList, source_sq: u8, target_sq: u8, pawn_type: u8, is_capture: bool) void {
+fn addPawnPromoMoves(mv_list: *MoveList, source_sq: u8, target_sq: u8, pawn_type: u8, is_capture: bool) void {
     const promo_pieces = [4]c.Piece{ c.Piece.wq, c.Piece.wr, c.Piece.wb, c.Piece.wn };
     for (promo_pieces) |promo_piece| {
-        move_list.add(Move.encode(source_sq, target_sq, pawn_type, @intFromEnum(promo_piece) + pawn_type, is_capture, false, false, false));
+        mv_list.add(Move.encode(source_sq, target_sq, pawn_type, @intFromEnum(promo_piece) + pawn_type, is_capture, false, false, false));
     }
 }
 
@@ -468,7 +468,7 @@ fn pawnHasntMoved(sq: u8, side: c.Side) bool {
     return sqInLastTwoRanks(sq, @enumFromInt(@intFromEnum(side) ^ 1));
 }
 
-fn addPawnMoves(pos: p.Position, move_list: *MoveList, pawn_type: u8) void {
+fn addPawnMoves(pos: p.Position, mv_list: *MoveList, pawn_type: u8) void {
     const forward_jump: i8 = if (pawn_type == @intFromEnum(c.Piece.wp)) Dir.n else Dir.s;
 
     var pawn_bb = pos.piece_bbs[pawn_type];
@@ -478,16 +478,16 @@ fn addPawnMoves(pos: p.Position, move_list: *MoveList, pawn_type: u8) void {
 
             if (!b.isSet(pos.occ_bbs[@intFromEnum(c.Side.both)], target_sq)) {
                 if (sqInLastRank(target_sq, pos.active_side)) {
-                    addPawnPromoMoves(move_list, source_sq, target_sq, pawn_type, false);
+                    addPawnPromoMoves(mv_list, source_sq, target_sq, pawn_type, false);
                 } else {
-                    move_list.add(Move.encode(source_sq, target_sq, pawn_type, no_promo, false, false, false, false));
+                    mv_list.add(Move.encode(source_sq, target_sq, pawn_type, no_promo, false, false, false, false));
                 }
 
                 const double_push_target = @as(u8, @intCast(@as(i8, @intCast(target_sq)) + forward_jump));
                 if (pawnHasntMoved(source_sq, pos.active_side) and
                     !b.isSet(pos.occ_bbs[@intFromEnum(c.Side.both)], double_push_target))
                 {
-                    move_list.add(Move.encode(source_sq, double_push_target, pawn_type, no_promo, false, true, false, false));
+                    mv_list.add(Move.encode(source_sq, double_push_target, pawn_type, no_promo, false, true, false, false));
                 }
             }
         }
@@ -495,21 +495,21 @@ fn addPawnMoves(pos: p.Position, move_list: *MoveList, pawn_type: u8) void {
         var attacks = pawn_attacks[@intFromEnum(pos.active_side)][source_sq] & pos.occ_bbs[(@intFromEnum(pos.active_side) ^ 1)];
         while (b.popLsb(&attacks)) |target_sq| {
             if (sqInLastRank(target_sq, pos.active_side)) {
-                addPawnPromoMoves(move_list, source_sq, target_sq, pawn_type, true);
+                addPawnPromoMoves(mv_list, source_sq, target_sq, pawn_type, true);
             } else {
-                move_list.add(Move.encode(source_sq, target_sq, pawn_type, no_promo, true, false, false, false));
+                mv_list.add(Move.encode(source_sq, target_sq, pawn_type, no_promo, true, false, false, false));
             }
         }
 
         if (pos.ep_sq) |ep_sq| {
             if (pawn_attacks[@intFromEnum(pos.active_side)][source_sq] & (@as(u64, 1) << @intCast(ep_sq)) != 0) {
-                move_list.add(Move.encode(source_sq, ep_sq, pawn_type, no_promo, true, false, true, false));
+                mv_list.add(Move.encode(source_sq, ep_sq, pawn_type, no_promo, true, false, true, false));
             }
         }
     }
 }
 
-fn addCastlingMoves(pos: p.Position, move_list: *MoveList) void {
+fn addCastlingMoves(pos: p.Position, mv_list: *MoveList) void {
     if (pos.active_side == c.Side.white) {
         if (((pos.castling_rights & @intFromEnum(c.CastlingRight.wks)) != 0) and
             !b.isSet(pos.occ_bbs[@intFromEnum(c.Side.both)], @intFromEnum(c.Square.f1)) and
@@ -517,7 +517,7 @@ fn addCastlingMoves(pos: p.Position, move_list: *MoveList) void {
             !isSquareAttacked(pos, @intFromEnum(c.Square.e1), c.Side.black) and
             !isSquareAttacked(pos, @intFromEnum(c.Square.f1), c.Side.black))
         {
-            move_list.add(Move.encode(@intFromEnum(c.Square.e1), @intFromEnum(c.Square.g1), @intFromEnum(c.Piece.wk), no_promo, false, false, false, true));
+            mv_list.add(Move.encode(@intFromEnum(c.Square.e1), @intFromEnum(c.Square.g1), @intFromEnum(c.Piece.wk), no_promo, false, false, false, true));
         }
 
         if (((pos.castling_rights & @intFromEnum(c.CastlingRight.wqs)) != 0) and
@@ -527,7 +527,7 @@ fn addCastlingMoves(pos: p.Position, move_list: *MoveList) void {
             !isSquareAttacked(pos, @intFromEnum(c.Square.e1), c.Side.black) and
             !isSquareAttacked(pos, @intFromEnum(c.Square.d1), c.Side.black))
         {
-            move_list.add(Move.encode(@intFromEnum(c.Square.e1), @intFromEnum(c.Square.c1), @intFromEnum(c.Piece.wk), no_promo, false, false, false, true));
+            mv_list.add(Move.encode(@intFromEnum(c.Square.e1), @intFromEnum(c.Square.c1), @intFromEnum(c.Piece.wk), no_promo, false, false, false, true));
         }
     } else {
         if (((pos.castling_rights & @intFromEnum(c.CastlingRight.bks)) != 0) and
@@ -536,7 +536,7 @@ fn addCastlingMoves(pos: p.Position, move_list: *MoveList) void {
             !isSquareAttacked(pos, @intFromEnum(c.Square.e8), c.Side.white) and
             !isSquareAttacked(pos, @intFromEnum(c.Square.f8), c.Side.white))
         {
-            move_list.add(Move.encode(@intFromEnum(c.Square.e8), @intFromEnum(c.Square.g8), @intFromEnum(c.Piece.bk), no_promo, false, false, false, true));
+            mv_list.add(Move.encode(@intFromEnum(c.Square.e8), @intFromEnum(c.Square.g8), @intFromEnum(c.Piece.bk), no_promo, false, false, false, true));
         }
 
         if (((pos.castling_rights & @intFromEnum(c.CastlingRight.bqs)) != 0) and
@@ -546,18 +546,18 @@ fn addCastlingMoves(pos: p.Position, move_list: *MoveList) void {
             !isSquareAttacked(pos, @intFromEnum(c.Square.e8), c.Side.white) and
             !isSquareAttacked(pos, @intFromEnum(c.Square.d8), c.Side.white))
         {
-            move_list.add(Move.encode(@intFromEnum(c.Square.e8), @intFromEnum(c.Square.c8), @intFromEnum(c.Piece.bk), no_promo, false, false, false, true));
+            mv_list.add(Move.encode(@intFromEnum(c.Square.e8), @intFromEnum(c.Square.c8), @intFromEnum(c.Piece.bk), no_promo, false, false, false, true));
         }
     }
 }
 
-fn addGenericPieceMoves(pos: p.Position, move_list: *MoveList, attacks_func: fn (u8, u64) u64, piece_type: u8) void {
+fn addGenericPieceMoves(pos: p.Position, mv_list: *MoveList, attacks_func: fn (u8, u64) u64, piece_type: u8) void {
     var pieces = pos.piece_bbs[piece_type];
     while (b.popLsb(&pieces)) |source_sq| {
         var attacks = attacks_func(source_sq, pos.occ_bbs[@intFromEnum(c.Side.both)]) & ~pos.occ_bbs[@intFromEnum(pos.active_side)];
         while (b.popLsb(&attacks)) |target_sq| {
             const is_capture = b.isSet(pos.occ_bbs[@intFromEnum(pos.active_side) ^ 1], target_sq);
-            move_list.add(Move.encode(source_sq, target_sq, piece_type, no_promo, is_capture, false, false, false));
+            mv_list.add(Move.encode(source_sq, target_sq, piece_type, no_promo, is_capture, false, false, false));
         }
     }
 }
@@ -570,16 +570,116 @@ fn getKingAttacks(sq: u8, _: u64) u64 {
     return king_attacks[sq];
 }
 
-pub fn genPseudoLegalMoves(pos: p.Position, move_list: *MoveList) void {
-    move_list.count = 0;
+pub fn genPseudoLegalMoves(pos: p.Position, mv_list: *MoveList) void {
+    mv_list.count = 0;
 
     const piece_offset: u8 = if (pos.active_side == c.Side.white) 0 else 6;
 
-    addPawnMoves(pos, move_list, @intFromEnum(c.Piece.wp) + piece_offset);
-    addCastlingMoves(pos, move_list);
-    addGenericPieceMoves(pos, move_list, getKnightAttacks, @intFromEnum(c.Piece.wn) + piece_offset);
-    addGenericPieceMoves(pos, move_list, getBishopAttacks, @intFromEnum(c.Piece.wb) + piece_offset);
-    addGenericPieceMoves(pos, move_list, getRookAttacks, @intFromEnum(c.Piece.wr) + piece_offset);
-    addGenericPieceMoves(pos, move_list, getQueenAttacks, @intFromEnum(c.Piece.wq) + piece_offset);
-    addGenericPieceMoves(pos, move_list, getKingAttacks, @intFromEnum(c.Piece.wk) + piece_offset);
+    addPawnMoves(pos, mv_list, @intFromEnum(c.Piece.wp) + piece_offset);
+    addCastlingMoves(pos, mv_list);
+    addGenericPieceMoves(pos, mv_list, getKnightAttacks, @intFromEnum(c.Piece.wn) + piece_offset);
+    addGenericPieceMoves(pos, mv_list, getBishopAttacks, @intFromEnum(c.Piece.wb) + piece_offset);
+    addGenericPieceMoves(pos, mv_list, getRookAttacks, @intFromEnum(c.Piece.wr) + piece_offset);
+    addGenericPieceMoves(pos, mv_list, getQueenAttacks, @intFromEnum(c.Piece.wq) + piece_offset);
+    addGenericPieceMoves(pos, mv_list, getKingAttacks, @intFromEnum(c.Piece.wk) + piece_offset);
+}
+
+// zig fmt: off
+const castling_rights = [c.num_squares]u8 {
+    13, 15, 15, 15, 12, 15, 15, 14,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    7,  15, 15, 15, 3,  15, 15, 11
+};
+// zig fmt: on
+
+const eighthRankOffset = 56;
+fn startRankSq(file: u8, side: c.Side) u8 {
+    return if (side == c.Side.white) file else file + eighthRankOffset; // Square x1 or x8 where x = file
+}
+
+pub fn makeMove(pos: *p.Position, mv: Move, mv_filter: MoveFilter) bool {
+    if (mv_filter == .just_captures and !mv.isCapture()) return false;
+
+    const backup = pos.*;
+
+    var piece_offset: u8 = 0;
+    var rev_piece_offset: u8 = 6;
+    var ep_dir: i8 = Dir.s;
+    if (pos.active_side == c.Side.black) {
+        piece_offset = 6;
+        rev_piece_offset = 0;
+        ep_dir = Dir.n;
+    }
+
+    b.clear(&pos.piece_bbs[mv.movedPiece()], mv.sourceSq());
+    b.set(&pos.piece_bbs[mv.movedPiece()], mv.targetSq());
+
+    if (mv.isCapture()) b.clear(&pos.piece_bbs[@intFromEnum(pos.pieceAt(mv.targetSq()) orelse unreachable)], mv.targetSq());
+
+    if (mv.promotedPiece() != no_promo) {
+        b.clear(&pos.piece_bbs[mv.movedPiece()], mv.targetSq());
+        b.set(&pos.piece_bbs[mv.promotedPiece()], mv.targetSq());
+    }
+
+    if (mv.isEnPassant()) b.clear(&pos.piece_bbs[@intFromEnum(c.Piece.wp) + rev_piece_offset], @intCast(@as(i8, @intCast(mv.targetSq())) + ep_dir));
+
+    const a_file = 0;
+    const c_file = 2;
+    const d_file = 3;
+    const f_file = 5;
+    const g_file = 6;
+    const h_file = 7;
+
+    if (mv.isCastling()) {
+        const rook_piece = @intFromEnum(c.Piece.wr) + piece_offset;
+        // Kingside
+        if (mv.targetSq() == startRankSq(g_file, pos.active_side)) {
+            const rook_source = startRankSq(h_file, pos.active_side);
+            const rook_target = startRankSq(f_file, pos.active_side);
+            b.clear(&pos.piece_bbs[rook_piece], rook_source);
+            b.set(&pos.piece_bbs[rook_piece], rook_target);
+        }
+        // Queenside
+        else if (mv.targetSq() == startRankSq(c_file, pos.active_side)) {
+            const rook_source = startRankSq(a_file, pos.active_side);
+            const rook_target = startRankSq(d_file, pos.active_side);
+            b.clear(&pos.piece_bbs[rook_piece], rook_source);
+            b.set(&pos.piece_bbs[rook_piece], rook_target);
+        }
+    }
+
+    pos.ep_sq = null;
+    if (mv.isDoublePush()) pos.ep_sq = @intCast(@as(i8, @intCast(mv.targetSq())) + ep_dir);
+
+    pos.castling_rights &= castling_rights[mv.sourceSq()];
+    pos.castling_rights &= castling_rights[mv.targetSq()];
+
+    if (mv.isCapture() or (mv.movedPiece() == (@intFromEnum(c.Piece.wp) + piece_offset))) {
+        pos.halfmove_clock = 0;
+    } else {
+        pos.halfmove_clock += 1;
+    }
+
+    if (pos.active_side == c.Side.black) pos.fullmove_num += 1;
+
+    pos.occ_bbs[@intFromEnum(c.Side.white)] = 0;
+    pos.occ_bbs[@intFromEnum(c.Side.black)] = 0;
+    for (@intFromEnum(c.Piece.wp)..@intFromEnum(c.Piece.wk)) |i| pos.occ_bbs[@intFromEnum(c.Side.white)] |= pos.piece_bbs[i];
+    for (@intFromEnum(c.Piece.bp)..@intFromEnum(c.Piece.bk)) |i| pos.occ_bbs[@intFromEnum(c.Side.black)] |= pos.piece_bbs[i];
+    pos.occ_bbs[@intFromEnum(c.Side.both)] = pos.occ_bbs[@intFromEnum(c.Side.white)] | pos.occ_bbs[@intFromEnum(c.Side.black)];
+
+    const king_sq = b.getLsb(pos.piece_bbs[@intFromEnum(c.Piece.wk) + piece_offset]) orelse unreachable;
+    if (isSquareAttacked(pos.*, king_sq, @enumFromInt(@intFromEnum(pos.active_side) ^ 1))) {
+        pos.* = backup;
+        return false;
+    }
+
+    pos.active_side = @enumFromInt(@intFromEnum(pos.active_side) ^ 1);
+
+    return true;
 }

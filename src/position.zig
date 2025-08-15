@@ -14,7 +14,7 @@ pub const Position = struct {
 
     const num_occ_bbs = 3;
 
-    fn pieceAt(self: Position, sq: u8) ?c.Piece {
+    pub fn pieceAt(self: Position, sq: u8) ?c.Piece {
         for (self.piece_bbs, 0..) |bb, piece_idx| if (b.isSet(bb, sq)) return @enumFromInt(piece_idx);
         return null;
     }
