@@ -3,8 +3,8 @@ const b = @import("bitboard.zig");
 const c = @import("common.zig");
 
 pub const Position = struct {
-    piece_bbs: [c.num_pieces]u64 = std.mem.zeroes([c.num_pieces]u64),
-    occ_bbs: [num_occ_bbs]u64 = std.mem.zeroes([num_occ_bbs]u64),
+    piece_bbs: [c.num_pieces]u64 = [_]u64{0} ** c.num_pieces,
+    occ_bbs: [num_occ_bbs]u64 = [_]u64{0} ** num_occ_bbs,
     zobrist_hash: u64 = 0,
     fullmove_num: u16 = 1,
     halfmove_clock: u8 = 0,
