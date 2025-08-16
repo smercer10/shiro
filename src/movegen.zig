@@ -619,7 +619,15 @@ pub fn makeMove(pos: *p.Position, mv: Move, mv_filter: MoveFilter) bool {
     b.clear(&pos.piece_bbs[mv.movedPiece()], mv.sourceSq());
     b.set(&pos.piece_bbs[mv.movedPiece()], mv.targetSq());
 
-    if (mv.isCapture()) b.clear(&pos.piece_bbs[@intFromEnum(pos.pieceAt(mv.targetSq()) orelse unreachable)], mv.targetSq());
+    if (mv.isCapture()) {
+        var i: u8 = rev_piece_offset;
+        while (i < (rev_piece_offset + 6)) : (i += 1) {
+            if (b.isSet(pos.piece_bbs[i], mv.targetSq())) {
+                b.clear(&pos.piece_bbs[i], mv.targetSq());
+                break;
+            }
+        }
+    }
 
     if (mv.promotedPiece() != no_promo) {
         b.clear(&pos.piece_bbs[mv.movedPiece()], mv.targetSq());
@@ -669,8 +677,8 @@ pub fn makeMove(pos: *p.Position, mv: Move, mv_filter: MoveFilter) bool {
 
     pos.occ_bbs[@intFromEnum(c.Side.white)] = 0;
     pos.occ_bbs[@intFromEnum(c.Side.black)] = 0;
-    for (@intFromEnum(c.Piece.wp)..@intFromEnum(c.Piece.wk)) |i| pos.occ_bbs[@intFromEnum(c.Side.white)] |= pos.piece_bbs[i];
-    for (@intFromEnum(c.Piece.bp)..@intFromEnum(c.Piece.bk)) |i| pos.occ_bbs[@intFromEnum(c.Side.black)] |= pos.piece_bbs[i];
+    for (@intFromEnum(c.Piece.wp)..@intFromEnum(c.Piece.wk) + 1) |i| pos.occ_bbs[@intFromEnum(c.Side.white)] |= pos.piece_bbs[i];
+    for (@intFromEnum(c.Piece.bp)..@intFromEnum(c.Piece.bk) + 1) |i| pos.occ_bbs[@intFromEnum(c.Side.black)] |= pos.piece_bbs[i];
     pos.occ_bbs[@intFromEnum(c.Side.both)] = pos.occ_bbs[@intFromEnum(c.Side.white)] | pos.occ_bbs[@intFromEnum(c.Side.black)];
 
     const king_sq = b.getLsb(pos.piece_bbs[@intFromEnum(c.Piece.wk) + piece_offset]) orelse unreachable;
