@@ -1,0 +1,35 @@
+on: [push, pull_request]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v5
+        - uses: mlugg/setup-zig@main
+          with:
+            version: 'master'
+        - run: |
+            zig version
+            zig build
+
+    perft:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v5
+        - uses: mlugg/setup-zig@main
+          with:
+            version: 'master'
+        - run: |
+            zig version
+            zig test -OReleaseFast src/perft.zig
+    
+    fmt:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v5
+        - uses: mlugg/setup-zig@main
+          with:
+            version: 'master'
+        - run: |
+            zig version
+            zig fmt --check .
