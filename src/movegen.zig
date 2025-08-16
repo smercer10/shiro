@@ -653,26 +653,19 @@ pub fn makeMove(pos: *p.Position, mv: Move, mv_filter: MoveFilter) bool {
 
     if (mv.isEnPassant()) b.clear(&pos.piece_bbs[@intFromEnum(c.Piece.wp) + rev_piece_offset], @intCast(@as(i8, @intCast(mv.targetSq())) + ep_dir));
 
-    const a_file_offset = 0;
-    const c_file_offset = 2;
-    const d_file_offset = 3;
-    const f_file_offset = 5;
-    const g_file_offset = 6;
-    const h_file_offset = 7;
-
     if (mv.isCastling()) {
         const rook_piece = @intFromEnum(c.Piece.wr) + piece_offset;
 
         // Kingside
-        if (mv.targetSq() == g_file_offset + start_rank_offset) {
-            b.clear(&pos.piece_bbs[rook_piece], h_file_offset + start_rank_offset);
-            b.set(&pos.piece_bbs[rook_piece], f_file_offset + start_rank_offset);
+        if (mv.targetSq() == c.g_file_offset + start_rank_offset) {
+            b.clear(&pos.piece_bbs[rook_piece], c.h_file_offset + start_rank_offset);
+            b.set(&pos.piece_bbs[rook_piece], c.f_file_offset + start_rank_offset);
         }
 
         // Queenside
-        else if (mv.targetSq() == c_file_offset + start_rank_offset) {
-            b.clear(&pos.piece_bbs[rook_piece], a_file_offset + start_rank_offset);
-            b.set(&pos.piece_bbs[rook_piece], d_file_offset + start_rank_offset);
+        else if (mv.targetSq() == c.c_file_offset + start_rank_offset) {
+            b.clear(&pos.piece_bbs[rook_piece], c.a_file_offset + start_rank_offset);
+            b.set(&pos.piece_bbs[rook_piece], c.d_file_offset + start_rank_offset);
         }
     }
 

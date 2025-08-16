@@ -2,6 +2,15 @@ pub const num_ranks = 8;
 pub const num_files = 8;
 pub const num_squares = num_ranks * num_files;
 
+pub const a_file_offset = 0;
+pub const b_file_offset = 1;
+pub const c_file_offset = 2;
+pub const d_file_offset = 3;
+pub const e_file_offset = 4;
+pub const f_file_offset = 5;
+pub const g_file_offset = 6;
+pub const h_file_offset = 7;
+
 // zig fmt: off
 pub const Square = enum(u8) {
     a1, b1, c1, d1, e1, f1, g1, h1,
