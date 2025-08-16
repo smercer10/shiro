@@ -14,8 +14,8 @@ pub const Position = struct {
 
     const num_occ_bbs = 3;
 
-    pub fn pieceAt(self: Position, sq: u8) ?c.Piece {
-        for (self.piece_bbs, 0..) |bb, piece_idx| if (b.isSet(bb, sq)) return @enumFromInt(piece_idx);
+    pub fn pieceAt(self: Position, sq: u8, first_piece_idx: u8, last_piece_idx: u8) ?c.Piece {
+        for (self.piece_bbs[first_piece_idx..last_piece_idx], first_piece_idx..) |bb, i| if (b.isSet(bb, sq)) return @enumFromInt(i);
         return null;
     }
 
@@ -27,12 +27,12 @@ pub const Position = struct {
     }
 
     pub fn print(self: Position) void {
-        for (0..b.num_ranks) |i| {
-            const r = b.num_ranks - 1 - i;
+        for (0..c.num_ranks) |i| {
+            const r = c.num_ranks - 1 - i;
             std.debug.print("{} | ", .{r + 1});
-            for (0..b.num_files) |f| {
-                const sq: u8 = @intCast(r * b.num_files + f);
-                const piece_char = if (self.pieceAt(sq)) |piece| piece.toChar() else '.';
+            for (0..c.num_files) |f| {
+                const sq: u8 = @intCast(r * c.num_files + f);
+                const piece_char = if (self.pieceAt(sq, 0, c.num_pieces - 1)) |piece| piece.toChar() else '.';
                 std.debug.print("{c} ", .{piece_char});
             }
             std.debug.print("\n", .{});
@@ -50,7 +50,7 @@ pub const Position = struct {
             if ((self.castling_rights & @intFromEnum(c.CastlingRight.bks)) != 0) "k" else "-",
             if ((self.castling_rights & @intFromEnum(c.CastlingRight.bqs)) != 0) "q" else "-",
         });
-        std.debug.print("En Passant Square: {s}\n", .{if (self.ep_sq) |sq| b.squares[sq] else "-"});
+        std.debug.print("En Passant Square: {s}\n", .{if (self.ep_sq) |sq| c.squares[sq] else "-"});
     }
 };
 
@@ -65,7 +65,7 @@ pub fn fromFen(fen: []const u8) !Position {
     var parts = std.mem.splitSequence(u8, fen, " ");
 
     const piece_placement_str = parts.next() orelse return error.InvalidFen;
-    var rank: u8 = 7;
+    var rank: u8 = c.num_ranks - 1;
     var file: u8 = 0;
     for (piece_placement_str) |ch| {
         switch (ch) {
